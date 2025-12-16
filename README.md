@@ -20,16 +20,7 @@ cd osrm
 make extract
 ```
 
-**Or manually (replace docker with podman if using Podman):**
-
-```bash
-# From the osrm directory
-docker run -t -v "$(pwd)/../_data:/data" ghcr.io/project-osrm/osrm-backend osrm-extract -p /opt/car.lua /data/berlin.pbf
-docker run -t -v "$(pwd)/../_data:/data" ghcr.io/project-osrm/osrm-backend osrm-partition /data/berlin.osrm
-docker run -t -v "$(pwd)/../_data:/data" ghcr.io/project-osrm/osrm-backend osrm-customize /data/berlin.osrm
-```
-
-**Note:** The extraction process can take several minutes depending on the size of the OSM file. The process will generate several `.osrm.*` files in the `_data` directory.
+**Note:** The extraction process can take several minutes depending on the size of the OSM file. The processed data (`.osrm.*` files) will be stored in a Docker/Podman volume named `osrm_osrm-data` (or `<COMPOSE_PROJECT_NAME>_osrm-data`). The source PBF file is read from `../_data/berlin.pbf` and copied into the volume for processing.
 
 ### 2. Start the Services
 
@@ -101,15 +92,24 @@ The stack supports both Docker and Podman. To use Podman:
 
 ## Using Different Profiles
 
-To use a different routing profile (e.g., `foot`, `bike`), modify the extraction command (run from project root):
+To use a different routing profile (e.g., `foot`, `bike`), you'll need to modify the extraction process. Currently, the Makefile uses the `car` profile by default. To use a different profile:
 
-```bash
-# For foot profile
-docker run -t -v "${PWD}/_data:/data" ghcr.io/project-osrm/osrm-backend osrm-extract -p /opt/foot.lua /data/berlin.pbf
+1. **Modify the Makefile** `extract` target to use a different profile:
+   - Change `/opt/car.lua` to `/opt/foot.lua` or `/opt/bike.lua`
 
-# For bike profile
-docker run -t -v "${PWD}/_data:/data" ghcr.io/project-osrm/osrm-backend osrm-extract -p /opt/bike.lua /data/berlin.pbf
-```
+2. **Or run manually** (replace `docker` with `podman` if using Podman):
+   ```bash
+   # Ensure volume exists
+   docker volume create osrm_osrm-data
+   
+   # Copy source file
+   docker run --rm -v osrm_osrm-data:/data -v "$(pwd)/../_data:/source:ro" alpine sh -c "cp /source/berlin.pbf /data/berlin.pbf"
+   
+   # Extract with foot profile
+   docker run --rm -v osrm_osrm-data:/data ghcr.io/project-osrm/osrm-backend osrm-extract -p /opt/foot.lua /data/berlin.pbf
+   docker run --rm -v osrm_osrm-data:/data ghcr.io/project-osrm/osrm-backend osrm-partition /data/berlin.osrm
+   docker run --rm -v osrm_osrm-data:/data ghcr.io/project-osrm/osrm-backend osrm-customize /data/berlin.osrm
+   ```
 
 Then update the `.env` file to set `PROFILE=foot` or `PROFILE=bike` accordingly.
 
@@ -117,13 +117,17 @@ Then update the `.env` file to set `PROFILE=foot` or `PROFILE=bike` accordingly.
 
 If you prefer to use the CH algorithm instead of MLD:
 
-1. Replace the partition and customize steps with a single contract step (run from project root):
+1. **Modify the Makefile** `extract` target to replace partition/customize with contract:
+   - Remove the `osrm-partition` and `osrm-customize` lines
+   - Add: `docker run --rm -v $(VOLUME_NAME):/data ghcr.io/project-osrm/osrm-backend osrm-contract /data/berlin.osrm`
 
-```bash
-docker run -t -v "${PWD}/_data:/data" ghcr.io/project-osrm/osrm-backend osrm-contract /data/berlin.osrm
-```
+2. **Or run manually** (replace `docker` with `podman` if using Podman):
+   ```bash
+   # Ensure volume exists and has the extracted data
+   docker run --rm -v osrm_osrm-data:/data ghcr.io/project-osrm/osrm-backend osrm-contract /data/berlin.osrm
+   ```
 
-2. Update `.env` to set `ALGORITHM=ch`
+3. Update `.env` to set `ALGORITHM=ch`
 
 ## Managing the Stack
 
@@ -160,6 +164,10 @@ make status
 
 # Clean up (stop and remove containers)
 make clean
+
+# Volume management
+make volume-ls              # List OSRM volumes
+make volume-rm              # Remove OSRM data volume (WARNING: deletes processed data)
 ```
 
 ### Using Docker Compose / Podman Compose Directly
@@ -186,11 +194,13 @@ podman compose restart
 ### Preprocessing fails
 - Ensure the `berlin.pbf` file exists in the `../_data` directory
 - Check that you have enough disk space (preprocessing can generate files several times larger than the original OSM file)
+- Verify the volume was created: `make volume-ls` or `docker volume ls | grep osrm`
 
 ### Services won't start
-- Verify that preprocessing completed successfully and `.osrm.*` files exist in `../_data`
-- Check the logs: `docker-compose logs osrm-backend`
+- Verify that preprocessing completed successfully: `make volume-ls` should show the `osrm_osrm-data` volume
+- Check the logs: `make logs service=osrm-backend`
 - Ensure the ports specified in `.env` are not already in use
+- Verify the volume exists and contains data: `docker volume inspect osrm_osrm-data` (or `podman volume inspect osrm_osrm-data`)
 
 ### Frontend can't connect to backend
 - Verify both services are running: `docker-compose ps`

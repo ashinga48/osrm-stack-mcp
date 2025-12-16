@@ -1,4 +1,4 @@
-.PHONY: help extract start stop start-all stop-all restart logs status clean mcp-venv mcp-install mcp-test mcp-check mcp-validate
+.PHONY: help extract start stop start-all stop-all restart logs status clean volume-ls volume-rm mcp-venv mcp-install mcp-test mcp-check mcp-validate
 
 # Load environment variables from .env file
 include .env
@@ -8,6 +8,9 @@ export
 # Uses CONTAINER_RUNTIME from .env or defaults to docker
 # Can be overridden: make start-all CONTAINER_RUNTIME=podman
 CONTAINER_RUNTIME ?= docker
+
+# Volume name (based on COMPOSE_PROJECT_NAME from .env)
+VOLUME_NAME = $(COMPOSE_PROJECT_NAME)_osrm-data
 
 # Default target
 help:
@@ -24,6 +27,8 @@ help:
 	@echo "  make logs service=<name>        - View logs for a specific service"
 	@echo "  make status                    - Show status of all services"
 	@echo "  make clean                     - Stop and remove all containers"
+	@echo "  make volume-ls                 - List volumes"
+	@echo "  make volume-rm                 - Remove OSRM data volume"
 	@echo ""
 	@echo "MCP Server Commands:"
 	@echo "  make mcp-venv                  - Create Python virtual environment"
@@ -35,12 +40,22 @@ help:
 # Pre-process OSM data
 extract:
 	@echo "Extracting OSM data using $(CONTAINER_RUNTIME)..."
-	@$(CONTAINER_RUNTIME) run -t -v "$$(pwd)/../_data:/data" ghcr.io/project-osrm/osrm-backend osrm-extract -p /opt/car.lua /data/berlin.pbf
-	@echo "Partitioning graph (MLD algorithm)..."
-	@$(CONTAINER_RUNTIME) run -t -v "$$(pwd)/../_data:/data" ghcr.io/project-osrm/osrm-backend osrm-partition /data/berlin.osrm
-	@echo "Customizing graph (MLD algorithm)..."
-	@$(CONTAINER_RUNTIME) run -t -v "$$(pwd)/../_data:/data" ghcr.io/project-osrm/osrm-backend osrm-customize /data/berlin.osrm
-	@echo "Pre-processing complete!"
+	@echo "Volume: $(VOLUME_NAME)"
+	@if [ ! -f "../_data/berlin.pbf" ]; then \
+		echo "Error: Source file ../_data/berlin.pbf not found"; \
+		exit 1; \
+	fi
+	@echo "Step 1: Ensuring volume exists..."
+	@$(CONTAINER_RUNTIME) volume create $(VOLUME_NAME) 2>/dev/null || echo "Volume already exists"
+	@echo "Step 2: Copying source PBF file to volume..."
+	@$(CONTAINER_RUNTIME) run --rm -v $(VOLUME_NAME):/data -v "$$(pwd)/../_data:/source:ro" alpine sh -c "cp /source/berlin.pbf /data/berlin.pbf && ls -lh /data/berlin.pbf"
+	@echo "Step 3: Extracting OSM data..."
+	@$(CONTAINER_RUNTIME) run --rm -v $(VOLUME_NAME):/data ghcr.io/project-osrm/osrm-backend osrm-extract -p /opt/car.lua /data/berlin.pbf
+	@echo "Step 4: Partitioning graph (MLD algorithm)..."
+	@$(CONTAINER_RUNTIME) run --rm -v $(VOLUME_NAME):/data ghcr.io/project-osrm/osrm-backend osrm-partition /data/berlin.osrm
+	@echo "Step 5: Customizing graph (MLD algorithm)..."
+	@$(CONTAINER_RUNTIME) run --rm -v $(VOLUME_NAME):/data ghcr.io/project-osrm/osrm-backend osrm-customize /data/berlin.osrm
+	@echo "✓ Pre-processing complete! Data stored in '$(VOLUME_NAME)' volume"
 
 # Start a specific service
 start:
@@ -163,6 +178,23 @@ clean:
 		exit 1; \
 	fi
 	@echo "Cleaned up all containers"
+
+# Volume management commands
+
+# List volumes
+volume-ls:
+	@echo "OSRM-related volumes:"
+	@$(CONTAINER_RUNTIME) volume ls | grep -E "(osrm|$(COMPOSE_PROJECT_NAME))" || echo "No OSRM volumes found"
+
+# Remove OSRM data volume (WARNING: This deletes all processed data!)
+volume-rm:
+	@echo "WARNING: This will delete the OSRM data volume: $(VOLUME_NAME)"
+	@echo "This action cannot be undone. All processed OSRM data will be lost."
+	@echo "To proceed, run: $(CONTAINER_RUNTIME) volume rm $(VOLUME_NAME)"
+	@echo "Or set FORCE=1 to remove without confirmation: make volume-rm FORCE=1"
+	@if [ "$(FORCE)" = "1" ]; then \
+		$(CONTAINER_RUNTIME) volume rm $(VOLUME_NAME) 2>/dev/null || echo "Volume does not exist or is in use"; \
+	fi
 
 # MCP Server Commands
 

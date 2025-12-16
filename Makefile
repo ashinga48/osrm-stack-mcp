@@ -27,6 +27,7 @@ help:
 	@echo "  make logs service=<name>        - View logs for a specific service"
 	@echo "  make status                    - Show status of all services"
 	@echo "  make clean                     - Stop and remove all containers"
+	@echo "  make destroy                   - Stop containers and remove ALL data (Reset)"
 	@echo "  make volume-ls                 - List volumes"
 	@echo "  make volume-rm                 - Remove OSRM data volume"
 	@echo ""
@@ -178,6 +179,12 @@ clean:
 		exit 1; \
 	fi
 	@echo "Cleaned up all containers"
+
+# Destroy everything - stops containers, removes them, and deletes data volume
+destroy: clean
+	@echo "Destroying everything including data volumes..."
+	@make volume-rm FORCE=1
+	@echo "✓ Stack destroyed successfully"
 
 # Volume management commands
 

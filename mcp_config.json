@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "osrm": {
+      "command": "/Users/ravi/Desktop/nbn/osrm/venv/bin/python",
+      "args": [
+        "/Users/ravi/Desktop/nbn/osrm/mcp_server.py"
+      ],
+      "env": {
+        "OSRM_BASE_URL": "http://localhost:5000"
+      }
+    }
+  }
+}
+

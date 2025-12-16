@@ -41,14 +41,14 @@ help:
 extract:
 	@echo "Extracting OSM data using $(CONTAINER_RUNTIME)..."
 	@echo "Volume: $(VOLUME_NAME)"
-	@if [ ! -f "../_data/berlin.pbf" ]; then \
-		echo "Error: Source file ../_data/berlin.pbf not found"; \
+	@if [ ! -f "./_data/berlin.pbf" ]; then \
+		echo "Error: Source file ./_data/berlin.pbf not found"; \
 		exit 1; \
 	fi
 	@echo "Step 1: Ensuring volume exists..."
 	@$(CONTAINER_RUNTIME) volume create $(VOLUME_NAME) 2>/dev/null || echo "Volume already exists"
 	@echo "Step 2: Copying source PBF file to volume..."
-	@$(CONTAINER_RUNTIME) run --rm -v $(VOLUME_NAME):/data -v "$$(pwd)/../_data:/source:ro" alpine sh -c "cp /source/berlin.pbf /data/berlin.pbf && ls -lh /data/berlin.pbf"
+	@$(CONTAINER_RUNTIME) run --rm -v $(VOLUME_NAME):/data -v "$$(pwd)/_data:/source:ro" alpine sh -c "cp /source/berlin.pbf /data/berlin.pbf && ls -lh /data/berlin.pbf"
 	@echo "Step 3: Extracting OSM data..."
 	@$(CONTAINER_RUNTIME) run --rm -v $(VOLUME_NAME):/data ghcr.io/project-osrm/osrm-backend osrm-extract -p /opt/car.lua /data/berlin.pbf
 	@echo "Step 4: Partitioning graph (MLD algorithm)..."

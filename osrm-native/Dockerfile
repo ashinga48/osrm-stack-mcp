@@ -1,43 +1,48 @@
-# OS Requirement: The pre-built binary uses GLIBC 2.38+ and libtbb.so.12. 
-# Ubuntu 24.04 provides these.
+# Stage 1: Builder
+# Uses Ubuntu 24.04 to match the glibc requirements of the pre-built OSRM binary
+FROM --platform=linux/amd64 ubuntu:24.04 AS builder
+
+WORKDIR /usr/src/app
+
+# Install build tools needed for npm install (just npm and nodeenv)
+RUN apt-get update && apt-get install -y \
+    nodejs \
+    npm \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy package.json and install dependencies
+COPY package.json ./
+
+# Install npm dependencies (downloads pre-built OSRM binary)
+# AND apply the critical symlink fix for the binary path
+RUN npm install \
+    && ln -s /usr/src/app/node_modules/@project-osrm/osrm/lib/binding_napi_v8 /usr/src/app/node_modules/@project-osrm/osrm/lib/binding \
+    && touch /built_check_v3
+
+# Stage 2: Runtime
+# Starts fresh with a minimal layer
 FROM --platform=linux/amd64 ubuntu:24.04
 
 WORKDIR /usr/src/app
 
-# Install dependencies and Node.js
+# Install ONLY runtime dependencies
+# - nodejs: to run the app
+# - libtbb12: required by osrm binary
+# - libbz2-1.0: required by osrm binary
 RUN apt-get update && apt-get install -y \
-    curl \
-    ca-certificates \
-    gnupg \
-    && mkdir -p /etc/apt/keyrings \
-    && mkdir -p /etc/apt/keyrings \
-    && apt-get update && apt-get install -y \
     nodejs \
-    npm \
-    python3 \
-    make \
-    g++ \
-    cmake \
-    libboost-all-dev \
-    liblua5.3-dev \
-    libtbb-dev \
-    libexpat1-dev \
-    libbz2-dev \
-    git \
+    libtbb12 \
+    libbz2-1.0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy only package.json first to cache dependencies
-COPY package.json ./
+# Copy built node_modules from builder stage
+COPY --from=builder /usr/src/app/node_modules ./node_modules
+COPY --from=builder /usr/src/app/package.json ./
 
-# Install dependencies (including @project-osrm/osrm)
-# This will attempt to download the pre-built binary.
-# Since we are forcing amd64 platform in compose, it should find the x64 binary.
-RUN npm install \
-    && ln -s /usr/src/app/node_modules/@project-osrm/osrm/lib/binding_napi_v8 /usr/src/app/node_modules/@project-osrm/osrm/lib/binding \
-    && touch /built_check_v2
-
+# Copy application source code
 COPY src ./src
 
+# Setup environment
 ENV OSRM_GRAPH_BASENAME=berlin \
     OSRM_ALGORITHM=mld \
     OSRM_PORT=5300 \

@@ -20,7 +20,7 @@ cd osrm
 make extract
 ```
 
-**Or manually:**
+**Or manually (replace docker with podman if using Podman):**
 
 ```bash
 # From the osrm directory
@@ -45,11 +45,13 @@ make start service=osrm-backend
 make start service=osrm-frontend
 ```
 
-**Or using docker-compose:**
+**Or using docker-compose/podman-compose directly:**
 
 ```bash
 cd osrm
 docker-compose up -d
+# or with podman:
+podman compose up -d
 ```
 
 This will start:
@@ -79,6 +81,23 @@ All configuration variables are defined in the `.env` file in this directory:
 - `OSM_FILE`: Base name of the OSM file without extension (default: berlin)
 - `OSRM_SERVER_URL`: Backend URL used by the frontend (default: http://osrm-backend:5000)
 - `PROFILE`: Routing profile to use (default: car)
+- `CONTAINER_RUNTIME`: Container runtime to use - `docker` or `podman` (default: docker)
+
+## Using Podman
+
+The stack supports both Docker and Podman. To use Podman:
+
+1. **Set in `.env` file:**
+   ```bash
+   CONTAINER_RUNTIME=podman
+   ```
+
+2. **Or override on the command line:**
+   ```bash
+   make start-all CONTAINER_RUNTIME=podman
+   ```
+
+**Note:** Podman uses `podman compose` (as a subcommand) or `podman-compose` (standalone). The Makefile will automatically detect which is available.
 
 ## Using Different Profiles
 
@@ -143,17 +162,23 @@ make status
 make clean
 ```
 
-### Using Docker Compose Directly
+### Using Docker Compose / Podman Compose Directly
 
 ```bash
 # Stop all services
 docker-compose down
+# or with podman:
+podman compose down
 
 # View logs
 docker-compose logs -f
+# or with podman:
+podman compose logs -f
 
 # Restart services
 docker-compose restart
+# or with podman:
+podman compose restart
 ```
 
 ## Troubleshooting

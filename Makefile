@@ -4,8 +4,16 @@
 include .env
 export
 
+# Container runtime detection (docker or podman)
+# Uses CONTAINER_RUNTIME from .env or defaults to docker
+# Can be overridden: make start-all CONTAINER_RUNTIME=podman
+CONTAINER_RUNTIME ?= docker
+
 # Default target
 help:
+	@echo "Container Runtime: $(CONTAINER_RUNTIME)"
+	@echo "Set CONTAINER_RUNTIME=podman in .env or override: make start-all CONTAINER_RUNTIME=podman"
+	@echo ""
 	@echo "OSRM Makefile Commands:"
 	@echo "  make extract                    - Pre-process OSM data (extract, partition, customize)"
 	@echo "  make start service=<name>       - Start a specific service (osrm-backend or osrm-frontend)"
@@ -26,12 +34,12 @@ help:
 
 # Pre-process OSM data
 extract:
-	@echo "Extracting OSM data..."
-	@docker run -t -v "$$(pwd)/../_data:/data" ghcr.io/project-osrm/osrm-backend osrm-extract -p /opt/car.lua /data/berlin.pbf
+	@echo "Extracting OSM data using $(CONTAINER_RUNTIME)..."
+	@$(CONTAINER_RUNTIME) run -t -v "$$(pwd)/../_data:/data" ghcr.io/project-osrm/osrm-backend osrm-extract -p /opt/car.lua /data/berlin.pbf
 	@echo "Partitioning graph (MLD algorithm)..."
-	@docker run -t -v "$$(pwd)/../_data:/data" ghcr.io/project-osrm/osrm-backend osrm-partition /data/berlin.osrm
+	@$(CONTAINER_RUNTIME) run -t -v "$$(pwd)/../_data:/data" ghcr.io/project-osrm/osrm-backend osrm-partition /data/berlin.osrm
 	@echo "Customizing graph (MLD algorithm)..."
-	@docker run -t -v "$$(pwd)/../_data:/data" ghcr.io/project-osrm/osrm-backend osrm-customize /data/berlin.osrm
+	@$(CONTAINER_RUNTIME) run -t -v "$$(pwd)/../_data:/data" ghcr.io/project-osrm/osrm-backend osrm-customize /data/berlin.osrm
 	@echo "Pre-processing complete!"
 
 # Start a specific service
@@ -41,8 +49,16 @@ start:
 		echo "Usage: make start service=osrm-backend"; \
 		exit 1; \
 	fi
-	@docker-compose up -d $(service)
-	@echo "Started $(service)"
+	@RUNTIME=$(CONTAINER_RUNTIME); \
+	if command -v $${RUNTIME}-compose > /dev/null 2>&1; then \
+		$${RUNTIME}-compose up -d $(service); \
+	elif $${RUNTIME} compose version > /dev/null 2>&1; then \
+		$${RUNTIME} compose up -d $(service); \
+	else \
+		echo "Error: $${RUNTIME}-compose or $${RUNTIME} compose not found"; \
+		exit 1; \
+	fi
+	@echo "Started $(service) using $(CONTAINER_RUNTIME)"
 
 # Stop a specific service
 stop:
@@ -51,17 +67,41 @@ stop:
 		echo "Usage: make stop service=osrm-backend"; \
 		exit 1; \
 	fi
-	@docker-compose stop $(service)
+	@RUNTIME=$(CONTAINER_RUNTIME); \
+	if command -v $${RUNTIME}-compose > /dev/null 2>&1; then \
+		$${RUNTIME}-compose stop $(service); \
+	elif $${RUNTIME} compose version > /dev/null 2>&1; then \
+		$${RUNTIME} compose stop $(service); \
+	else \
+		echo "Error: $${RUNTIME}-compose or $${RUNTIME} compose not found"; \
+		exit 1; \
+	fi
 	@echo "Stopped $(service)"
 
 # Start all services
 start-all:
-	@docker-compose up -d
-	@echo "Started all services"
+	@RUNTIME=$(CONTAINER_RUNTIME); \
+	if command -v $${RUNTIME}-compose > /dev/null 2>&1; then \
+		$${RUNTIME}-compose up -d; \
+	elif $${RUNTIME} compose version > /dev/null 2>&1; then \
+		$${RUNTIME} compose up -d; \
+	else \
+		echo "Error: $${RUNTIME}-compose or $${RUNTIME} compose not found"; \
+		exit 1; \
+	fi
+	@echo "Started all services using $(CONTAINER_RUNTIME)"
 
 # Stop all services
 stop-all:
-	@docker-compose down
+	@RUNTIME=$(CONTAINER_RUNTIME); \
+	if command -v $${RUNTIME}-compose > /dev/null 2>&1; then \
+		$${RUNTIME}-compose down; \
+	elif $${RUNTIME} compose version > /dev/null 2>&1; then \
+		$${RUNTIME} compose down; \
+	else \
+		echo "Error: $${RUNTIME}-compose or $${RUNTIME} compose not found"; \
+		exit 1; \
+	fi
 	@echo "Stopped all services"
 
 # Restart a specific service
@@ -71,7 +111,15 @@ restart:
 		echo "Usage: make restart service=osrm-backend"; \
 		exit 1; \
 	fi
-	@docker-compose restart $(service)
+	@RUNTIME=$(CONTAINER_RUNTIME); \
+	if command -v $${RUNTIME}-compose > /dev/null 2>&1; then \
+		$${RUNTIME}-compose restart $(service); \
+	elif $${RUNTIME} compose version > /dev/null 2>&1; then \
+		$${RUNTIME} compose restart $(service); \
+	else \
+		echo "Error: $${RUNTIME}-compose or $${RUNTIME} compose not found"; \
+		exit 1; \
+	fi
 	@echo "Restarted $(service)"
 
 # View logs for a specific service
@@ -81,15 +129,39 @@ logs:
 		echo "Usage: make logs service=osrm-backend"; \
 		exit 1; \
 	fi
-	@docker-compose logs -f $(service)
+	@RUNTIME=$(CONTAINER_RUNTIME); \
+	if command -v $${RUNTIME}-compose > /dev/null 2>&1; then \
+		$${RUNTIME}-compose logs -f $(service); \
+	elif $${RUNTIME} compose version > /dev/null 2>&1; then \
+		$${RUNTIME} compose logs -f $(service); \
+	else \
+		echo "Error: $${RUNTIME}-compose or $${RUNTIME} compose not found"; \
+		exit 1; \
+	fi
 
 # Show status of all services
 status:
-	@docker-compose ps
+	@RUNTIME=$(CONTAINER_RUNTIME); \
+	if command -v $${RUNTIME}-compose > /dev/null 2>&1; then \
+		$${RUNTIME}-compose ps; \
+	elif $${RUNTIME} compose version > /dev/null 2>&1; then \
+		$${RUNTIME} compose ps; \
+	else \
+		echo "Error: $${RUNTIME}-compose or $${RUNTIME} compose not found"; \
+		exit 1; \
+	fi
 
 # Clean up - stop and remove all containers
 clean:
-	@docker-compose down
+	@RUNTIME=$(CONTAINER_RUNTIME); \
+	if command -v $${RUNTIME}-compose > /dev/null 2>&1; then \
+		$${RUNTIME}-compose down; \
+	elif $${RUNTIME} compose version > /dev/null 2>&1; then \
+		$${RUNTIME} compose down; \
+	else \
+		echo "Error: $${RUNTIME}-compose or $${RUNTIME} compose not found"; \
+		exit 1; \
+	fi
 	@echo "Cleaned up all containers"
 
 # MCP Server Commands

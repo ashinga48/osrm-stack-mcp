@@ -52,21 +52,23 @@ This will start:
 ### 3. Access the Services
 
 - **Frontend UI**: Open [http://localhost:9966](http://localhost:9966) in your browser
-- **Backend API**: Available at [http://localhost:5000](http://localhost:5000)
+- **Backend API**: Available at [http://localhost:5001](http://localhost:5001) (configurable via `BACKEND_PORT` in `.env`)
 
 ### 4. Test the Backend API
 
 Test the routing API with a sample request:
 
 ```bash
-curl "http://localhost:5000/route/v1/driving/13.388860,52.517037;13.385983,52.496891?steps=true"
+curl "http://localhost:5001/route/v1/driving/13.388860,52.517037;13.385983,52.496891?steps=true"
 ```
+
+**Note:** The default port is 5001 to avoid conflicts with macOS AirPlay Receiver (which uses port 5000). You can change it in the `.env` file.
 
 ## Configuration
 
 All configuration variables are defined in the `.env` file in this directory:
 
-- `BACKEND_PORT`: Port for the OSRM backend service (default: 5000)
+- `BACKEND_PORT`: Port for the OSRM backend service (default: 5001, changed from 5000 to avoid macOS AirPlay Receiver conflict)
 - `FRONTEND_PORT`: Port for the OSRM frontend service (default: 9966)
 - `ALGORITHM`: Routing algorithm to use - `mld` (Multi-Level Dijkstra) or `ch` (Contraction Hierarchies) (default: mld)
 - `OSM_FILE`: Base name of the OSM file without extension (default: berlin)

@@ -233,8 +233,9 @@ mcp-check:
 # Test MCP server connection to OSRM
 mcp-test:
 	@echo "Testing MCP server connection to OSRM..."
-	@if ! curl -s http://localhost:5000/route/v1/driving/13.388860,52.517037;13.385983,52.496891 > /dev/null 2>&1; then \
-		echo "✗ OSRM backend is not running. Start it with 'make start service=osrm-backend'"; \
+	@BACKEND_PORT=$$(grep BACKEND_PORT .env 2>/dev/null | cut -d= -f2 || echo "5001"); \
+	if ! curl -s http://localhost:$${BACKEND_PORT}/route/v1/driving/13.388860,52.517037;13.385983,52.496891 > /dev/null 2>&1; then \
+		echo "✗ OSRM backend is not running on port $${BACKEND_PORT}. Start it with 'make start service=osrm-backend'"; \
 		exit 1; \
 	fi
 	@echo "✓ OSRM backend is accessible"

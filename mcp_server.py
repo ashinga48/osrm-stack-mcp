@@ -14,7 +14,7 @@ from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 
 # OSRM server configuration
-OSRM_BASE_URL = "http://localhost:5000"
+OSRM_BASE_URL = "http://localhost:5001"
 
 # Initialize MCP server
 server = Server("osrm-server")

@@ -1,8 +1,14 @@
 const express = require("express");
 const logfmt = require("logfmt");
+const cors = require("cors");
 const osrm = require("./lib/osrm-loader");
 
 const app = express();
+
+// CORS Middleware
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || "*"
+}));
 
 // Logging Middleware
 app.use((req, res, next) => {

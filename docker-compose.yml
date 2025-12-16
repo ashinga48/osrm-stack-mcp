@@ -20,8 +20,7 @@ services:
       - "${FRONTEND_PORT:-9966}:9966"
     environment:
       - OSRM_SERVER_URL=${OSRM_SERVER_URL:-http://osrm-backend:5000}
-    depends_on:
-      - osrm-backend
+      - OSRM_BACKEND=${OSRM_BACKEND:-http://osrm-backend:5000}
     restart: unless-stopped
     networks:
       - osrm-network
@@ -70,6 +69,7 @@ services:
       - OSRM_GRAPH_BASENAME=${OSM_FILE:-berlin}
       - OSRM_ALGORITHM=${ALGORITHM:-MLD}
       - OSRM_PORT=5300
+      - CORS_ORIGIN=*
     volumes:
       - osrm-data:/data
     restart: unless-stopped

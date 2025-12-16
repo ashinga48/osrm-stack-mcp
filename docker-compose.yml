@@ -26,6 +26,23 @@ services:
     networks:
       - osrm-network
 
+  osrm-proxy:
+    build:
+      context: ./osrm-proxy
+    container_name: osrm-proxy
+    ports:
+      - "${PROXY_PORT:-5100}:5100"
+    environment:
+      - OSRM_GRAPH_BASENAME=${OSM_FILE:-berlin}
+      - OSRM_ALGORITHM=${ALGORITHM:-mld}
+      - OSRM_PORT=5000
+      - PROXY_PORT=${PROXY_PORT:-5100}
+    volumes:
+      - osrm-data:/data
+    restart: unless-stopped
+    networks:
+      - osrm-network
+
 volumes:
   osrm-data:
     driver: local

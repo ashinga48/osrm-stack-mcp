@@ -1,0 +1,20 @@
+{
+  "name": "osrm-proxy",
+  "version": "0.1.0",
+  "description": "Lightweight Node.js proxy that runs osrm-routed over the shared data volume",
+  "main": "src/index.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "http-proxy-middleware": "^2.0.6",
+    "morgan": "^1.10.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+

@@ -48,11 +48,13 @@ podman compose up -d
 This will start:
 - **OSRM Backend** on port `5000` (configurable via `.env`)
 - **OSRM Frontend** on port `9966` (configurable via `.env`)
+- **Node Proxy** on port `5100` (configurable via `.env`) – runs `osrm-routed` directly against the shared data volume and proxies requests via Express
 
 ### 3. Access the Services
 
 - **Frontend UI**: Open [http://localhost:9966](http://localhost:9966) in your browser
 - **Backend API**: Available at [http://localhost:5001](http://localhost:5001) (configurable via `BACKEND_PORT` in `.env`)
+- **Proxy API**: Available at [http://localhost:5100](http://localhost:5100) (configurable via `PROXY_PORT` in `.env`)
 
 ### 4. Test the Backend API
 
@@ -75,6 +77,20 @@ All configuration variables are defined in the `.env` file in this directory:
 - `OSRM_SERVER_URL`: Backend URL used by the frontend (default: http://osrm-backend:5000)
 - `PROFILE`: Routing profile to use (default: car)
 - `CONTAINER_RUNTIME`: Container runtime to use - `docker` or `podman` (default: docker)
+- `PROXY_PORT`: Port for the Node.js proxy service (default: 5100)
+
+### Proxy Service Details
+
+The `osrm-proxy` service lives in `osrm/osrm-proxy` and:
+- Mounts the same `osrm-data` volume as the backend so the extracted graph is available at `/data/<OSM_FILE>.osrm`
+- Starts `osrm-routed` inside the container using `ALGORITHM`/`OSM_FILE`
+- Exposes an Express proxy on `PROXY_PORT` that forwards all API calls to the local `osrm-routed`
+
+Example request against the proxy:
+
+```bash
+curl "http://localhost:${PROXY_PORT:-5100}/route/v1/driving/13.388860,52.517037;13.385983,52.496891?steps=true"
+```
 
 ## Using Podman
 

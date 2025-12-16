@@ -1,0 +1,15 @@
+{
+    "name": "osrm-native",
+    "version": "1.0.0",
+    "description": "Node.js service using native OSRM bindings",
+    "main": "src/run.js",
+    "scripts": {
+        "start": "node src/run.js"
+    },
+    "dependencies": {
+        "express": "^4.19.2",
+        "logfmt": "^1.2.0",
+        "@project-osrm/osrm": "^6.0.0",
+        "dotenv": "^16.4.5"
+    }
+}

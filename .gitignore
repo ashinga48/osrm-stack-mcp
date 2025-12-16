@@ -1,0 +1,29 @@
+# OS files
+.DS_Store
+
+# OSRM generated files
+_data/*.osrm*
+_data/*.osrm.hsgr
+_data/*.osrm.edges
+_data/*.osrm.geometry
+_data/*.osrm.ramIndex
+_data/*.osrm.fileIndex
+_data/*.osrm.names
+_data/*.osrm.timestamp
+_data/*.osrm.cells
+_data/*.osrm.cell_metrics
+_data/*.osrm.mld
+_data/*.osrm.partition
+_data/*.osrm.enw
+_data/*.osrm.cnbg
+_data/*.osrm.cnbg_to_ebg
+_data/*.osrm.ebg_nodes
+_data/*.raptor
+
+# Environment files (optional - uncomment if you want to ignore .env)
+# .env
+
+# Python virtual environment
+osrm/venv/
+
+node_modules

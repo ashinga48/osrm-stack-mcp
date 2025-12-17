@@ -46,15 +46,17 @@ podman compose up -d
 ```
 
 This will start:
-- **OSRM Backend** on port `5000` (configurable via `.env`)
-- **OSRM Frontend** on port `9966` (configurable via `.env`)
-- **Node Proxy** on port `5100` (configurable via `.env`) – runs `osrm-routed` directly against the shared data volume and proxies requests via Express
+- **OSRM Backend** on port `5001` (configurable via `BACKEND_PORT` in `.env`) - Standard C++ HTTP server
+- **OSRM Frontend** on port `9966` (configurable via `FRONTEND_PORT` in `.env`) - Map UI
+- **OSRM Native** on port `5300` (configurable via `.env`) - **High-performance Node.js service** using direct C++ bindings
+- **Node Proxy** on port `5100` (configurable via `PROXY_PORT` in `.env`) - Proxy service for testing
 
 ### 3. Access the Services
 
 - **Frontend UI**: Open [http://localhost:9966](http://localhost:9966) in your browser
-- **Backend API**: Available at [http://localhost:5001](http://localhost:5001) (configurable via `BACKEND_PORT` in `.env`)
-- **Proxy API**: Available at [http://localhost:5100](http://localhost:5100) (configurable via `PROXY_PORT` in `.env`)
+- **Native API**: Available at [http://localhost:5300](http://localhost:5300) (High Performance)
+- **Backend API**: Available at [http://localhost:5001](http://localhost:5001)
+- **Proxy API**: Available at [http://localhost:5100](http://localhost:5100)
 
 ### 4. Test the Backend API
 
@@ -183,6 +185,12 @@ make status
 # Clean up (stop and remove containers)
 make clean
 
+# Destroy Stack (Remove containers AND Data Volume)
+make destroy
+
+# Package Data (Create tarball of processed graph)
+make package
+
 # Volume management
 make volume-ls              # List OSRM volumes
 make volume-rm              # Remove OSRM data volume (WARNING: deletes processed data)
@@ -223,6 +231,15 @@ podman compose restart
 ### Frontend can't connect to backend
 - Verify both services are running: `docker-compose ps`
 - Check that `OSRM_SERVER_URL` in `.env` matches the backend service name and port
+
+## Native Service Details (`osrm-native`)
+
+The `osrm-native` service is the recommended way to interact with the routing engine for custom applications.
+- **Architecture**: uses the `@project-osrm/osrm` npm package to load the C++ routing engine directly into the Node.js process.
+- **Performance**: Eliminates HTTP overhead between Node.js and the database engine.
+- **Image Size**: Optimized multi-stage Docker build (~200MB).
+- **CORS**: Enabled by default (`*`), configurable via `CORS_ORIGIN`.
+- **Apple Silicon**: Runs under `linux/amd64` emulation with optimized glibc/libtbb dependencies.
 
 ## References
 
